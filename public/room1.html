@@ -1,0 +1,50 @@
+<html>
+    <head>
+        Room1
+    </head>
+    <body>
+        <h1>Room1</h1>
+        <br>
+        <br>
+        <center>
+            <h3>Song</h3>
+            <br>
+            <br>
+            <audio controls src="Aathangara.mp3" id="audioId" />
+            <br>
+            <br>
+            
+        </center>
+
+        <button onclick="changeSong()">Change Song</button>
+        <br>
+        <br>
+        <button onclick="createRoom()">Create Room</button>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+            var room='room1';
+            socket.on('connect',function(){
+                console.log('connected to websocket');
+                // socket.emit('join',room);
+            });
+
+            socket.on('roomMessage',(msg)=>{
+                console.log(msg);
+            });
+
+            function changeSong(){
+                console.log("changeSong called");
+                let audioTag=document.getElementById("audioId");
+                audioTag.src="BabyDoll.mp3";
+
+            }
+
+            function createRoom(){
+                socket.emit('createRoom');
+            }
+            
+        </script>
+    </body>
+</html>

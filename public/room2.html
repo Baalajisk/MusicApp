@@ -1,0 +1,36 @@
+<html>
+    <head>
+        Room2
+    </head>
+    <body>
+        <h1>Room2</h1>
+        <br>
+        <br>
+        <center>
+            <h3>Song</h3>
+            <br>
+            <br>
+            <audio controls src="BabyDoll.mp3"/>
+            <br>
+            <br>
+            <div id="msg">
+
+            </div>
+
+            
+        </center>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+            socket.on('connect',()=>{
+                socket.emit('joinRoom','room2');
+            });
+
+            socket.on('roomMessage',(msg)=>{
+                document.getElementById('msg').innerText(msg);
+            });
+            
+        </script>
+    </body>
+</html>

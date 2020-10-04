@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Room</title>
+</head>
+<body>
+    <h1>Audio Room</h1>
+    <br>
+    <br>
+    <center>
+        <h3>Song</h3>
+        <br>
+        <br>
+        <audio controls src="Aathangara.mp3" id="audioId" />
+        <br>
+        <br>
+        
+    </center>
+
+    <button onclick="changeSongReq()">Change Song</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+            var roomNo;
+            socket.on('connect',function(){
+                console.log('connected to websocket');
+                const queryparms = new URLSearchParams(location.search);
+                
+                for(const [key,value] of queryparms){
+                    if(key=="newRoom" && value=="true"){
+                        socket.emit('createRoom',(createdRoomNo)=>{
+                            roomNo=createdRoomNo;
+                            console.log(roomNo);
+                        });
+                    }
+                    else if(key=="roomId"){
+                        socket.emit('join',value);
+                        roomNo=value;
+                    }
+                }
+
+                
+                
+            });
+
+            socket.on('roomMessage',(msg)=>{
+                console.log(msg);
+            })
+
+            function changeSongReq(){
+
+                socket.emit('changeSongReq',roomNo,()=>{
+                    changeSong();
+                });
+
+            }
+
+            socket.on('changeSongRes',()=>{
+                changeSong();
+            });
+
+
+            function changeSong(){
+                console.log("changeSong called");
+                let audioTag=document.getElementById("audioId");
+
+                audioTag.src="BabyDoll.mp3";
+                
+
+            }
+
+  
+            
+        </script>
+</body>
+</html>
