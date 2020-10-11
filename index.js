@@ -6,6 +6,7 @@ var io = require('socket.io')(http);
 
 var noOfRooms=0;
 var rooms=[];
+var songList=["baby doll","chikini chameli","despacito","saree ke fall sa"];
 
 app.use(express.static('public'));
 
@@ -26,6 +27,17 @@ app.get('/audioRoom',(req,res)=>{
 
 app.get('/index', (req, res) => {
   res.sendFile(__dirname+'/public/index.html');
+});
+
+app.get('/song',(req,res)=>{
+  let searchKey=req.query.searchKey;
+  let responseList=[];
+  for(let song of songList){
+    if(song.indexOf(searchKey)>-1){
+      responseList.push(song);
+    }
+  }
+  res.send(responseList);
 });
 
 io.on("connection",(socket)=>{
@@ -58,14 +70,24 @@ io.on("connection",(socket)=>{
       socket.emit('availableRooms',rooms);
     });
 
-    socket.on('changeSongReq',(roomNo,callBackFn)=>{
+    socket.on('changeSongReq',(roomNo,reqSong)=>{
       
-      socket.to(roomNo).emit('changeSongRes');
+      console.log(reqSong);
+      let resSong=reqSong+".mp3";
+      console.log(resSong);
+      io.to(roomNo).emit('changeSongRes',resSong);
 
-      callBackFn();
+      
 
       console.log(`changeSongReq and changeSongRes called for room : ${roomNo}`);
     })
+
+    socket.on('changePlayTime',(roomNo,changedPlayTime)=>{
+      console.log("change play time called for room ",roomNo);
+      socket.to(roomNo).emit('changePlayTimeRes',changedPlayTime);
+    })
+    
+    
     
 });
 

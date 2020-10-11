@@ -9,11 +9,16 @@
     <h1>Audio Room</h1>
     <br>
     <br>
+    <input type="text" id="searchBar" placeholder="search songs" onkeyup="searchSong()">
+    <br>
+    <div id="searchDiv">
+
+    </div>
     <center>
         <h3>Song</h3>
         <br>
         <br>
-        <audio controls src="Aathangara.mp3" id="audioId" />
+        <audio controls src="Aathangara.mp3" id="audioId" onseeked="currentTimeUpdated()" />
         <br>
         <br>
         
@@ -22,9 +27,13 @@
     <button onclick="changeSongReq()">Change Song</button>
 
     <script src="/socket.io/socket.io.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script>
             var socket = io();
             var roomNo;
+            var previousPlayTime=0;
+            var currentPlayTime;
             socket.on('connect',function(){
                 console.log('connected to websocket');
                 const queryparms = new URLSearchParams(location.search);
@@ -48,28 +57,96 @@
 
             socket.on('roomMessage',(msg)=>{
                 console.log(msg);
+            });
+
+            socket.on('changePlayTimeRes',(changedTime)=>{
+                let audioTag = document.getElementById('audioId');
+                audioTag.currentTime=changedTime;
+                console.log('song time changed');
             })
 
             function changeSongReq(){
 
-                socket.emit('changeSongReq',roomNo,()=>{
-                    changeSong();
-                });
+                let reqSong = $("#searchBar").val();
+                clearSuggestionList();
+
+                socket.emit('changeSongReq',roomNo,reqSong);
 
             }
 
-            socket.on('changeSongRes',()=>{
-                changeSong();
+            
+
+            socket.on('changeSongRes',(songSrc)=>{
+                console.log("changeSongRes "+songSrc);
+                changeSong(songSrc);
             });
 
 
-            function changeSong(){
-                console.log("changeSong called");
+            function changeSong(songSrc){
+                console.log("changeSong called for song "+songSrc);
                 let audioTag=document.getElementById("audioId");
 
-                audioTag.src="BabyDoll.mp3";
+                audioTag.src=songSrc;
                 
 
+            }
+
+            function searchSong(){
+                let searchKey = $('#searchBar').val();
+                console.log(searchKey);
+                clearSuggestionList();
+                if(searchKey){
+                    $.get(`/song?searchKey=${searchKey}`,(responseData)=>{
+                        let searchDivNode=document.getElementById("searchDiv");
+                        let searchListDivNode=document.createElement("div");
+                        searchListDivNode.setAttribute("id","searchListDiv");
+                        
+                        
+                        for(let i=0;i<responseData.length;i++){
+                            let breakNode = document.createElement('br');
+                            let sResultDivNode=document.createElement('div');
+                            sResultDivNode.innerText=responseData[i];
+                            let funcParam=sResultDivNode.innerText;
+                            sResultDivNode.setAttribute('onclick',`getSong("${funcParam}")`);
+                            searchListDivNode.appendChild(breakNode);
+                            searchListDivNode.appendChild(sResultDivNode);
+                            
+                            
+
+                        }
+                        searchDivNode.appendChild(searchListDivNode);
+                        
+                    });
+                }
+                
+            }
+
+            function getSong(song){
+                clearSuggestionList();
+                console.log("requested song : "+song);
+            }
+
+            function clearSuggestionList(){
+                let searchDivNode = document.getElementById("searchDiv");
+                let searchListDivNode=document.getElementById("searchListDiv");
+
+                if(searchListDivNode){
+                    searchDivNode.removeChild(searchListDivNode);
+                }
+                
+                
+            }
+
+            function currentTimeUpdated(){
+                let audioTag=document.getElementById("audioId");
+                currentPlayTime=audioTag.currentTime;
+                if(currentPlayTime!=previousPlayTime){
+                    console.log("current time updated to :",currentPlayTime);
+                    
+                    socket.emit("changePlayTime",roomNo,currentPlayTime);
+                }
+                previousPlayTime=currentPlayTime;
+               
             }
 
   
