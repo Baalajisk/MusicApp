@@ -12,14 +12,24 @@
         <a href='/room2'>Room2</a>
         <br>
         <br>
-        <a href='/audioRoom?newRoom=true'>Create Room</a>
+        <a href='/audioRoom?newRoom=true'>Create Audio Room</a>
         <br>
         <br>
         <div id='roomsDiv'>
-            <h3>Available Rooms</h3>
+            <h3>Available Audio Rooms</h3>
             <br>
             
         </div>
+        <br>
+        <br>
+        <a href='/search?newRoom=true'>Create Video Room</a>
+        <div id='vRoomsDiv'>
+            <h3>Available Video Rooms</h3>
+            <br>
+            
+        </div>
+        <br>
+        <br>
 
         <script src="/socket.io/socket.io.js"></script>
         <script>
@@ -27,23 +37,43 @@
             socket.on('connect',()=>{
                 socket.emit('getRooms');
                 
+                
             });
 
-            socket.on('availableRooms',(rooms)=>{
+            socket.on('availableRooms',(rooms,vRooms)=>{
 
                 console.log(rooms);
+                console.log(vRooms);
 
 
                 if(rooms.length>0){
                     for(let i=0;i<rooms.length;i++){
+                        console.log(rooms[i]);
                         let divNode=document.getElementById('roomsDiv');
                         let anchorNode=document.createElement('a');
                         let breakNode=document.createElement("br");
                         
-                        let roomId=rooms[i];
+                        let roomId=rooms[i].roomId;
                         let innerTextNode= document.createTextNode(`Link to room ${roomId}`);
                         anchorNode.appendChild(innerTextNode);
                         anchorNode.href=`/audioRoom?newRoom=false&roomId=${roomId}`;
+                        divNode.appendChild(anchorNode);
+                        divNode.appendChild(breakNode);
+
+                    }
+                }
+
+                if(vRooms.length>0){
+                    for(let i=0;i<vRooms.length;i++){
+                        console.log(vRooms[i]);
+                        let divNode=document.getElementById('vRoomsDiv');
+                        let anchorNode=document.createElement('a');
+                        let breakNode=document.createElement("br");
+                        
+                        let vRoomId=vRooms[i].roomId;
+                        let innerTextNode= document.createTextNode(`Link to room ${vRoomId}`);
+                        anchorNode.appendChild(innerTextNode);
+                        anchorNode.href=`/search?search=false&roomId=${vRoomId}`;
                         divNode.appendChild(anchorNode);
                         divNode.appendChild(breakNode);
 

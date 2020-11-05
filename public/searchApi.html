@@ -1,0 +1,283 @@
+<html>
+<head>
+
+<meta charset="UTF-8">
+
+
+
+<script src="https://apis.google.com/js/api.js"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<script>
+  /**
+   * Sample JavaScript code for youtube.search.list
+   * See instructions for running APIs Explorer code samples locally:
+   * https://developers.google.com/explorer-help/guides/code_samples#javascript
+   */
+
+  var socket=io();
+  var vRoomObj;
+  var videoPreviousTime=-1;
+  socket.on("connect",function(){
+    console.log("video room connected");
+    const queryparms = new URLSearchParams(location.search);
+                
+                for(const [key,value] of queryparms){
+                    if(key=="newRoom" && value=="true"){
+                        socket.emit('createVideoRoom',(createdRoomNo)=>{
+                            roomNo=createdRoomNo;
+                            console.log(roomNo);
+                        });
+                    }
+                    else if(key=="roomId"){
+                        socket.emit('joinVRoom',value);
+                        roomNo=value;
+                    }
+                }
+  });
+
+  socket.on("vRoomObjDetails",function(videoRoomObj){
+    vRoomObj=videoRoomObj;
+    console.log(vRoomObj);
+    if(vRoomObj.videoId != -1){
+      
+      playVideo(vRoomObj.videoId);
+    }
+    
+  });
+
+  socket.on("videoTimeReq",function(getCurrentVideoTime){
+    let currentPlayingTime=player.getCurrentTime();
+    console.log("videoTimeReq called :",currentPlayingTime);
+    // socket.to(vRoomObj.roomId).emit('videoTimeRes',currentPlayingTime);
+    getCurrentVideoTime(currentPlayingTime);
+  });
+
+
+
+  var currentVideoId;
+  var player;
+  var playerFlag=0;
+
+  function authenticate() {
+    return gapi.auth2.getAuthInstance()
+        .signIn({scope: "https://www.googleapis.com/auth/youtube.force-ssl"})
+        .then(function() { console.log("Sign-in successful"); },
+              function(err) { console.error("Error signing in", err); });
+  }
+  function loadClient() {
+    gapi.client.setApiKey("AIzaSyAYdIc6dg_1ZgupD9cF_vytGsfT3HXAOxo");
+    return gapi.client.load("https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest")
+        .then(function() { console.log("GAPI client loaded for API"); },
+              function(err) { console.error("Error loading GAPI client for API", err); });
+  }
+  // Make sure the client is loaded and sign-in is complete before calling this method.
+  function execute() {
+    let searchKey=document.getElementById("search").value;
+    return gapi.client.youtube.search.list({
+      "part": [
+        "snippet"
+      ],
+      "q": searchKey
+    })
+        .then(function(response) {
+                // Handle the results here (response.result has the parsed body).
+                // for(key in response){
+                //   console.log(key);
+                // }
+                
+                let result=response.result;
+                let body=response.body;
+                let responseItems=result.items;
+                let resultListDiv=document.getElementById("resultList");
+                let oldListDiv=document.getElementById("videoListDiv");
+                if(oldListDiv){
+                  resultListDiv.removeChild(oldListDiv);
+                }
+                let videoListDiv=document.createElement("div");
+                videoListDiv.id="videoListDiv";
+                for(let i=0;i<responseItems.length;i++){
+                  let id=responseItems[i].id;
+                  let snippet=responseItems[i].snippet;
+                  let videoDiv=document.createElement("div");
+                  let detailsDiv=document.createElement("div");
+                  detailsDiv.innerText=snippet.title;          
+                  videoDiv.id="video"+(i+1);
+                  videoDiv.addEventListener("click",function(){
+                    console.log("anonymous ",id);
+                    // playVideo(id);
+                    changeVideoReq(id);
+                  })
+                  
+                  let imgNode=document.createElement("img");
+                  let imgSrc=snippet.thumbnails.medium.url;
+                  imgNode.src=imgSrc;
+                  videoDiv.appendChild(imgNode);
+                  videoDiv.appendChild(detailsDiv);
+                  let brNode=document.createElement("br");
+                  videoListDiv.appendChild(brNode);
+                  videoListDiv.appendChild(brNode);
+                  videoListDiv.appendChild(videoDiv);
+                  // console.log(id);
+                  // console.log(snippet);
+                }
+                resultListDiv.appendChild(videoListDiv);
+              },
+              function(err) { console.error("Execute error", err); });
+  }
+  gapi.load("client:auth2", function() {
+    gapi.auth2.init({client_id: "483530659571-1g8h7d65oblfeoc3c8osm57m6tbbcda6.apps.googleusercontent.com"});
+  });
+
+  function changeVideoReq(id){
+    vRoomObj.videoId=id;
+    socket.emit("changeVideoReq",vRoomObj);
+    console.log("change video requested with videoId: ",id);
+    playVideo(id);
+  }
+
+  socket.on("changeVideoRes",function(changedVideoId){
+    vRoomObj.videoId=changedVideoId;
+    console.log("change video response called");
+    playVideo(changedVideoId);
+  });
+
+  function playVideo(id){
+    // console.log(id);
+    currentVideoId=id.videoId;
+    console.log("current video Id: ",currentVideoId);
+    if(playerFlag==1){
+      console.log("playerFlag",playerFlag);
+      player.loadVideoById(
+          {
+          'videoId': currentVideoId
+          }
+      );
+    }
+    else{
+
+      playerFlag=1;
+
+      var tag = document.createElement('script');
+
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    }
+   
+
+
+
+  }
+
+  function onYouTubeIframeAPIReady() {
+        console.log("onyoutubeIframe",currentVideoId);
+        player = new YT.Player('player', {
+          height: '390',
+          width: '640',
+          videoId: currentVideoId,
+          // playerVars:{
+          //   controls:0
+          // },
+          
+          events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+
+      function onPlayerReady() {
+        console.log("player ready");
+        socket.emit("playerReady",vRoomObj.roomId);
+        // console.log(event);
+        // event.target.playVideo();
+        let playerState=player.getPlayerState();
+        let currentPlayingTime=vRoomObj.currentTime;
+
+        if(currentPlayingTime != 0){
+          player.playVideoAt(currentPlayingTime);
+        }
+        else{
+          player.playVideo();
+        }
+        
+      }
+
+      function onPlayerStateChange(){
+        console.log("on play state change called");
+        let playerState=player.getPlayerState();
+        switch(playerState){
+          case -1:
+            console.log("video unstarted");
+            console.log(player);
+            player.playVideo();
+            break;
+          case 0:
+            console.log("video ended");
+            break;
+          case 1:
+            
+            console.log("video playing");
+            let currentTimePlaying=player.getCurrentTime();
+            if(Math.abs((currentTimePlaying-videoPreviousTime))>5){
+              
+            console.log(currentTimePlaying);
+            videoPreviousTime=currentTimePlaying;
+            socket.emit("videoPlaying",vRoomObj.roomId,currentTimePlaying);
+
+            }
+            
+            break;
+          case 2:
+            console.log("video paused");
+            let currentTimePaused=player.getCurrentTime();
+            console.log(currentTimePaused);
+            socket.emit("videoPaused",vRoomObj.roomId,currentTimePaused);
+            break;
+        }
+      }
+
+      socket.on('videoPlayingRes',function(time){
+        player.seekTo(time,true);
+        player.playVideo();
+
+      });
+
+      socket.on('videoPausedRes',function(time){
+        player.seekTo(time,true);
+        player.pauseVideo();
+      });
+
+      socket.on("pauseAndPlay",function(){
+      player.pauseVideo();
+      player.playVideo();
+      });
+
+
+</script>
+
+
+</head>
+<body onload="authenticate().then(loadClient)"> 
+  <!-- <button onclick="authenticate().then(loadClient)">authorize and load</button> -->
+  <br>
+  <br>
+  <input type="text" id="search"/>
+  <button onclick="execute()">search</button>
+  <br>
+  <br>
+  <div id="player"></div>
+  <br>
+  <br>
+  <div id="resultList">
+
+  </div>
+
+</body>
+</html>
+
