@@ -3,6 +3,7 @@ var express = require('express');
 var app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
+var cors = require('cors');
 
 var noOfRooms=0;
 var noOfVRooms=0;
@@ -11,6 +12,7 @@ var vRooms=[];
 var songList=["baby doll","chikini chameli","despacito","saree ke fall sa"];
 
 app.use(express.static('public'));
+app.use(cors());
 
 
 
